@@ -1,15 +1,26 @@
-Source: template-repository
-Section: unknown
+Source: golang-github-cyphar-filepath-securejoin
+Section: golang
 Priority: optional
-Maintainer: Tsic404 <liuheng@deepin.org>
-Build-Depends: debhelper (>= 11)
-Standards-Version: 4.1.3
-Homepage: https://github.com/deepin-community/template-repository
-#Vcs-Browser: https://salsa.debian.org/debian/deepin-community-template-repository
-#Vcs-Git: https://salsa.debian.org/debian/deepin-community-template-repository.git
+Standards-Version: 4.6.0
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders: Dmitry Smirnov <onlyjob@debian.org>,
+Build-Depends: debhelper-compat (= 13),
+               dh-golang,
+               golang-any,
+Homepage: https://github.com/cyphar/filepath-securejoin
+Vcs-Browser: https://salsa.debian.org/go-team/packages/golang-github-cyphar-filepath-securejoin
+Vcs-Git: https://salsa.debian.org/go-team/packages/golang-github-cyphar-filepath-securejoin.git
+XS-Go-Import-Path: github.com/cyphar/filepath-securejoin
+Rules-Requires-Root: no
+Testsuite: autopkgtest-pkg-go
 
-Package: template-repository
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Package: golang-github-cyphar-filepath-securejoin-dev
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+Description: filepath.SecureJoin implementation
+ An implementation of SecureJoin, a candidate for inclusion in the Go
+ standard library (https://github.com/golang/go/issues/20126). The purpose
+ of this function is to be a "secure" alternative to filepath.Join, and in
+ particular it provides certain guarantees that are not provided by
+ filepath.Join.
