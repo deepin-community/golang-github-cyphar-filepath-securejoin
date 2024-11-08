@@ -1,3 +1,26 @@
+golang-github-cyphar-filepath-securejoin (0.3.4-3) unstable; urgency=medium
+
+  * Team upload.
+  * Fix FTBFS on i386, armhf
+  * Avoid timeout related failures on slow architectures
+
+ -- Reinhard Tartler <siretart@tauware.de>  Sun, 20 Oct 2024 08:07:28 -0400
+
+golang-github-cyphar-filepath-securejoin (0.3.4-2) unstable; urgency=medium
+
+  * Team upload.
+  * Relax TestVerifyProcRoot_ProcNonRoot to fix debci
+
+ -- Reinhard Tartler <siretart@tauware.de>  Sat, 19 Oct 2024 17:00:17 -0400
+
+golang-github-cyphar-filepath-securejoin (0.3.4-1) unstable; urgency=medium
+
+  * Team upload 0.3.4
+  * New upstream release
+  * Add additional dependencies: stretchr/testify, golang/x-sys
+
+ -- Reinhard Tartler <siretart@tauware.de>  Fri, 18 Oct 2024 16:03:09 -0400
+
 golang-github-cyphar-filepath-securejoin (0.2.3-1) unstable; urgency=medium
 
   * Team upload.

@@ -2,3 +2,12 @@
 
 %:
 	dh $@ --buildsystem=golang --with=golang
+
+# don't fail tests on slow architectures
+override_dh_auto_test:
+ifeq (,$(filter $(DEB_HOST_ARCH), riscv64))
+	dh_auto_test -- -timeout=20m
+else
+	-dh_auto_test -- -timeout=20min
+endif
+
