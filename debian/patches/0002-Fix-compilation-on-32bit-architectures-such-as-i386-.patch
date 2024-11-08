@@ -1,0 +1,127 @@
+From: Reinhard Tartler <siretart@tauware.de>
+Date: Sun, 20 Oct 2024 06:31:57 -0400
+Subject: Fix compilation on 32bit architectures such as i386, armhf
+
+On those architectures, the tests fail to build with an overflow error:
+
+src/github.com/cyphar/filepath-securejoin/mkdir_linux_test.go:254:8: constant 2147484159 overflows int
+FAIL	github.com/cyphar/filepath-securejoin [build failed]
+
+Turns out that FileMode is defined as an uint32 in the os.fs package.
+Since `MkdirAll` is intended as a replacement for os.MkdirAll, it makes
+sense to use the same types for all arguments, and that means os.FileMode
+for the mode parameter.
+
+Forwarded: https://github.com/cyphar/filepath-securejoin/pull/34
+---
+ mkdir_linux.go      |  6 ++++--
+ mkdir_linux_test.go | 22 +++++++++++-----------
+ 2 files changed, 15 insertions(+), 13 deletions(-)
+
+diff --git a/mkdir_linux.go b/mkdir_linux.go
+index b5f6745..7ab6bc6 100644
+--- a/mkdir_linux.go
++++ b/mkdir_linux.go
+@@ -22,6 +22,8 @@ var (
+ 	errPossibleAttack = errors.New("possible attack detected")
+ )
+ 
++type FileMode = os.FileMode
++
+ // MkdirAllHandle is equivalent to [MkdirAll], except that it is safer to use
+ // in two respects:
+ //
+@@ -40,7 +42,7 @@ var (
+ // a brand new lookup of unsafePath (such as with [SecureJoin] or openat2) after
+ // doing [MkdirAll]. If you intend to open the directory after creating it, you
+ // should use MkdirAllHandle.
+-func MkdirAllHandle(root *os.File, unsafePath string, mode int) (_ *os.File, Err error) {
++func MkdirAllHandle(root *os.File, unsafePath string, mode FileMode) (_ *os.File, Err error) {
+ 	// Make sure there are no os.FileMode bits set.
+ 	if mode&^0o7777 != 0 {
+ 		return nil, fmt.Errorf("%w for mkdir 0o%.3o", errInvalidMode, mode)
+@@ -191,7 +193,7 @@ func MkdirAllHandle(root *os.File, unsafePath string, mode int) (_ *os.File, Err
+ //
+ // NOTE: The mode argument must be set the unix mode bits (unix.S_I...), not
+ // the Go generic mode bits ([os.FileMode]...).
+-func MkdirAll(root, unsafePath string, mode int) error {
++func MkdirAll(root, unsafePath string, mode FileMode) error {
+ 	rootDir, err := os.OpenFile(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+ 	if err != nil {
+ 		return err
+diff --git a/mkdir_linux_test.go b/mkdir_linux_test.go
+index 9499057..45a786a 100644
+--- a/mkdir_linux_test.go
++++ b/mkdir_linux_test.go
+@@ -19,14 +19,14 @@ import (
+ 	"golang.org/x/sys/unix"
+ )
+ 
+-type mkdirAllFunc func(t *testing.T, root, unsafePath string, mode int) error
++type mkdirAllFunc func(t *testing.T, root, unsafePath string, mode FileMode) error
+ 
+-var mkdirAll_MkdirAll mkdirAllFunc = func(t *testing.T, root, unsafePath string, mode int) error {
++var mkdirAll_MkdirAll mkdirAllFunc = func(t *testing.T, root, unsafePath string, mode FileMode) error {
+ 	// We can't check expectedPath here.
+ 	return MkdirAll(root, unsafePath, mode)
+ }
+ 
+-var mkdirAll_MkdirAllHandle mkdirAllFunc = func(t *testing.T, root, unsafePath string, mode int) error {
++var mkdirAll_MkdirAllHandle mkdirAllFunc = func(t *testing.T, root, unsafePath string, mode FileMode) error {
+ 	// Same logic as MkdirAll.
+ 	rootDir, err := os.OpenFile(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+ 	if err != nil {
+@@ -54,7 +54,7 @@ var mkdirAll_MkdirAllHandle mkdirAllFunc = func(t *testing.T, root, unsafePath s
+ 	return nil
+ }
+ 
+-func checkMkdirAll(t *testing.T, mkdirAll mkdirAllFunc, root, unsafePath string, mode, expectedMode int, expectedErr error) {
++func checkMkdirAll(t *testing.T, mkdirAll mkdirAllFunc, root, unsafePath string, mode, expectedMode FileMode, expectedErr error) {
+ 	rootDir, err := os.OpenFile(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+ 	require.NoError(t, err)
+ 	defer rootDir.Close()
+@@ -134,7 +134,7 @@ func testMkdirAll_Basic(t *testing.T, mkdirAll mkdirAllFunc) {
+ 		for name, test := range map[string]struct {
+ 			unsafePath       string
+ 			expectedErr      error
+-			expectedModeBits int
++			expectedModeBits FileMode
+ 		}{
+ 			"existing":              {unsafePath: "a"},
+ 			"basic":                 {unsafePath: "a/b/c/d/e/f/g/h/i/j"},
+@@ -219,7 +219,7 @@ func testMkdirAll_AsRoot(t *testing.T, mkdirAll mkdirAllFunc) {
+ 		for name, test := range map[string]struct {
+ 			unsafePath       string
+ 			expectedErr      error
+-			expectedModeBits int
++			expectedModeBits FileMode
+ 		}{
+ 			// Make sure the S_ISGID handling is correct.
+ 			"sgid-dir-ownedbyus":           {unsafePath: "sgid-self/foo/bar/baz", expectedModeBits: unix.S_ISGID},
+@@ -247,13 +247,13 @@ func TestMkdirAllHandle_AsRoot(t *testing.T) {
+ 
+ func testMkdirAll_InvalidMode(t *testing.T, mkdirAll mkdirAllFunc) {
+ 	for _, test := range []struct {
+-		mode        int
++		mode        FileMode
+ 		expectedErr error
+ 	}{
+ 		// os.FileMode bits are invalid.
+-		{int(os.ModeDir | 0o777), errInvalidMode},
+-		{int(os.ModeSticky | 0o777), errInvalidMode},
+-		{int(os.ModeIrregular | 0o777), errInvalidMode},
++		{FileMode(os.ModeDir | 0o777), errInvalidMode},
++		{FileMode(os.ModeSticky | 0o777), errInvalidMode},
++		{FileMode(os.ModeIrregular | 0o777), errInvalidMode},
+ 		// unix.S_IFMT bits are also invalid.
+ 		{unix.S_IFDIR | 0o777, errInvalidMode},
+ 		{unix.S_IFREG | 0o777, errInvalidMode},
+@@ -294,7 +294,7 @@ func newRacingMkdirMeta() *racingMkdirMeta {
+ 	}
+ }
+ 
+-func (m *racingMkdirMeta) checkMkdirAllHandle_Racing(t *testing.T, root, unsafePath string, mode int, allowedErrs []error) {
++func (m *racingMkdirMeta) checkMkdirAllHandle_Racing(t *testing.T, root, unsafePath string, mode FileMode, allowedErrs []error) {
+ 	rootDir, err := os.OpenFile(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+ 	require.NoError(t, err, "open root")
+ 	defer rootDir.Close()

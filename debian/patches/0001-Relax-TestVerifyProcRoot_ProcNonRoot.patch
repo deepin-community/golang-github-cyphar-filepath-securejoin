@@ -1,0 +1,51 @@
+From: Reinhard Tartler <siretart@tauware.de>
+Date: Sat, 19 Oct 2024 16:59:22 -0400
+Subject: Relax TestVerifyProcRoot_ProcNonRoot
+
+Fails on debci in LXC with:
+
+290s === RUN   TestVerifyProcRoot_ProcNonRoot/thread-self="thread-self"
+290s     procfs_linux_test.go:396:
+290s         	Error Trace:	/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:396
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:410
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/util_linux_test.go:83
+290s         	Error:      	Error "unsafe procfs detected: incorrect procfs root filesystem type 0x65735546" does not contain "incorrect procfs root inode number"
+290s         	Test:       	TestVerifyProcRoot_ProcNonRoot/thread-self="thread-self"
+290s         	Messages:   	verifyProcRoot(/proc/stat)
+290s === RUN   TestVerifyProcRoot_ProcNonRoot/thread-self="self/task"
+290s     procfs_linux_test.go:396:
+290s         	Error Trace:	/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:396
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:410
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/util_linux_test.go:83
+290s         	Error:      	Error "unsafe procfs detected: incorrect procfs root filesystem type 0x65735546" does not contain "incorrect procfs root inode number"
+290s         	Test:       	TestVerifyProcRoot_ProcNonRoot/thread-self="self/task"
+290s         	Messages:   	verifyProcRoot(/proc/stat)
+290s === RUN   TestVerifyProcRoot_ProcNonRoot/thread-self="self"
+290s     procfs_linux_test.go:396:
+290s         	Error Trace:	/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:396
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/procfs_linux_test.go:410
+290s         	            				/tmp/autopkgtest-lxc.mg9dhiho/downtmp/autopkgtest_tmp/obj-x86_64-linux-gnu/src/github.com/cyphar/filepath-securejoin/util_linux_test.go:83
+290s         	Error:      	Error "unsafe procfs detected: incorrect procfs root filesystem type 0x65735546" does not contain "incorrect procfs root inode number"
+290s         	Test:       	TestVerifyProcRoot_ProcNonRoot/thread-self="self"
+290s         	Messages:   	verifyProcRoot(/proc/stat)
+---
+ procfs_linux_test.go | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/procfs_linux_test.go b/procfs_linux_test.go
+index 61bfed6..25fafd3 100644
+--- a/procfs_linux_test.go
++++ b/procfs_linux_test.go
+@@ -405,9 +405,9 @@ func TestVerifyProcRoot_Regular(t *testing.T) {
+ 
+ func TestVerifyProcRoot_ProcNonRoot(t *testing.T) {
+ 	testForceProcThreadSelf(t, func(t *testing.T) {
+-		testVerifyProcRoot(t, "/proc/self", errUnsafeProcfs, "incorrect procfs root inode number")
+-		testVerifyProcRoot(t, "/proc/mounts", errUnsafeProcfs, "incorrect procfs root inode number")
+-		testVerifyProcRoot(t, "/proc/stat", errUnsafeProcfs, "incorrect procfs root inode number")
++		testVerifyProcRoot(t, "/proc/self", errUnsafeProcfs, "incorrect procfs root")
++		testVerifyProcRoot(t, "/proc/mounts", errUnsafeProcfs, "incorrect procfs root")
++		testVerifyProcRoot(t, "/proc/stat", errUnsafeProcfs, "incorrect procfs root")
+ 	})
+ }
+ 
